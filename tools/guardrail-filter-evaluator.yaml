@@ -1,0 +1,17 @@
+name: guardrail-filter-evaluator
+description: Scans payloads for prompt injections, confidential data, and evaluates CEL security policies.
+input_schema:
+  type: object
+  properties:
+    payload_text:
+      type: string
+      description: Prompt, system instruction, or completion text to evaluate.
+    policy_name:
+      type: string
+      description: Identifier of the CEL policy or guardrail profile to enforce.
+    auto_redact_pii:
+      type: boolean
+      description: Whether to automatically mask detected PII entities.
+      default: true
+  required:
+    - payload_text

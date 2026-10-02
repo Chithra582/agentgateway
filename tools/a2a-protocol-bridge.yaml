@@ -1,0 +1,18 @@
+name: a2a-protocol-bridge
+description: Bridges messages and task requests between collaborating autonomous agents via A2A protocol.
+input_schema:
+  type: object
+  properties:
+    target_agent_id:
+      type: string
+      description: Unique identifier or URI of the recipient agent.
+    message_payload:
+      type: object
+      description: Structured message payload conforming to A2A specification.
+    require_mtls:
+      type: boolean
+      description: Whether mutual TLS verification is required for communication.
+      default: true
+  required:
+    - target_agent_id
+    - message_payload

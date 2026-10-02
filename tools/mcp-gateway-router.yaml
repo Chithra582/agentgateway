@@ -1,0 +1,18 @@
+name: mcp-gateway-router
+description: Dispatches and proxies tool call requests to registered Model Context Protocol (MCP) upstream servers.
+input_schema:
+  type: object
+  properties:
+    tool_name:
+      type: string
+      description: Name of the target MCP tool to execute.
+    arguments:
+      type: object
+      description: Input arguments matching the tool schema.
+    transport:
+      type: string
+      description: Transport protocol ('stdio', 'sse', 'http', 'streamable-http').
+      default: "sse"
+  required:
+    - tool_name
+    - arguments
