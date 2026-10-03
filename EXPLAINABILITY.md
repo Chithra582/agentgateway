@@ -1,8 +1,8 @@
 # EXPLAINABILITY.md
 
-This document explains the internal mechanisms, data lineage, operational boundaries, and governance framework of **# Explainability & Decision Transparency Report** (`agentgateway`) in accordance with the **OpenGAP v0.1.0** specification for the **HiDevs GitAgent Passport** clearance pipeline.
+This document explains the internal mechanisms, data lineage, operational boundaries, and governance framework of **AgentGateway** (`agentgateway`) in accordance with the **OpenGAP v0.1.0** specification for the **HiDevs GitAgent Passport** clearance pipeline.
 
-> **Agent Name:** # Explainability & Decision Transparency Report (`agentgateway`)  
+> **Agent Name:** AgentGateway (`agentgateway`)  
 > **Specification:** OpenGAP v0.1.0  
 > **Category / Domain:** Developer Tools / Agent Networking, MCP Federation & A2A Communication  
 > **Compliance Standard:** OpenGAP Checkpoint 2 (Explainability & Decision Governance), OWASP LLM Top 10, MITRE ATLAS  
@@ -11,7 +11,7 @@ This document explains the internal mechanisms, data lineage, operational bounda
 
 ## How the Agent Decides
 
-# Explainability & Decision Transparency Report operates via a deterministic five-stage operational pipeline.
+The gateway routes and secures agentic communications through a deterministic, 5-stage packet inspection and dispatch pipeline.
 
 ### 1. Decision Architecture
 
@@ -52,7 +52,6 @@ The runtime intake, state classification, evaluation, and execution tracking ope
 
 ### 2. Decision Logic & Routing Formulations
 
-Scoring
 Upstream LLM backend routing and tool server selection apply a cost- and latency-optimized affinity formulation:
 
 $$S_{\text{route}}(p) = w_1 \cdot \left(1 - \frac{\text{QueueDepth}(p)}{\text{MaxQueue}}\right) + w_2 \cdot \left(1 - \frac{\text{Latency}_{\text{p95}}(p)}{\text{MaxLatency}}\right) + w_3 \cdot \text{CacheAffinity}(p) - w_4 \cdot \text{CostPerToken}(p)$$
@@ -71,29 +70,31 @@ Where $\mathbf{q}_{\text{tool}}$ is the requested capability vector and $\mathbf
 
 ### 3. Thresholding & Refusal Decision Criteria
 
-# Explainability & Decision Transparency Report enforces strict operational boundaries and deterministic refusal thresholds:
-- **Refusal on ERR_AUTH_INVALID_CREDENTIALS**: **Authentication Failure** halts execution with code `ERR_AUTH_INVALID_CREDENTIALS`.
-- **Refusal on ERR_POLICY_ACCESS_DENIED**: **RBAC / CEL Policy Denial** halts execution with code `ERR_POLICY_ACCESS_DENIED`.
-- **Refusal on ERR_GUARDRAIL_INJECTION_DETECTED**: **Prompt Injection Score** halts execution with code `ERR_GUARDRAIL_INJECTION_DETECTED`.
-- **Refusal on ERR_RATE_LIMIT_EXCEEDED**: **Tenant Token Rate Quota** halts execution with code `ERR_RATE_LIMIT_EXCEEDED`.
-- **Refusal on ERR_CIRCUIT_BREAKER_TRIPPED**: **Upstream Provider Outage** halts execution with code `ERR_CIRCUIT_BREAKER_TRIPPED`.
+AgentGateway enforces strict operational boundaries and deterministic refusal thresholds:
+- **Refusal on ERR_AUTH_INVALID_CREDENTIALS**: Authentication Failure (Invalid token / expired JWT) halts execution with code `ERR_AUTH_INVALID_CREDENTIALS`.
+- **Refusal on ERR_POLICY_ACCESS_DENIED**: RBAC / CEL Policy Denial (Evaluates to `false`) halts execution with code `ERR_POLICY_ACCESS_DENIED`.
+- **Refusal on ERR_GUARDRAIL_INJECTION_DETECTED**: Prompt Injection Score (Classifier confidence $\ge 0.85$) halts execution with code `ERR_GUARDRAIL_INJECTION_DETECTED`.
+- **Refusal on ERR_RATE_LIMIT_EXCEEDED**: Tenant Token Rate Quota ($> 100,000$ tokens/min) halts execution with code `ERR_RATE_LIMIT_EXCEEDED`.
+- **Refusal on ERR_CIRCUIT_BREAKER_TRIPPED**: Upstream Provider Outage (5 consecutive HTTP 5xx responses) halts execution with code `ERR_CIRCUIT_BREAKER_TRIPPED`.
 
 ### 4. Fallback Decision Mechanism
 
 Continuous operational stability is maintained through layered fault recovery:
+- **Tier 1 (Automated Upstream Failover)**: If the primary LLM provider drops connection or returns 503, the proxy dynamically fails over to a secondary provider within 200ms.
+- **Tier 2 (Degraded Mode & Tool Cache)**: If an external MCP tool server becomes unreachable, the gateway serves cached schema responses or signals degraded modality to the calling agent.
 - **Model Fallback Cascade**: High-level reasoning and synthesis default to `gemini-2.0-flash` with automatic failover to `gpt-4o` and `claude-3-5-sonnet`.
 
 ### 5. Human-in-the-Loop Governance
 
 Human operators retain sovereign authority over the multi-agent execution lifecycle:
-- **Consequential Action Sign-Off**: Sensitive and consequential actions require operator sign-off.
-- **Offline Ledger Auditing**: Operators can verify execution records and state transitions offline.
+- **Tier 3 (Human Administrator Intervention)**: Prolonged clusterwide circuit breaker activations dispatch alerts to oncall infrastructure engineers via PagerDuty/Webhook.
+- **Benchmark Trajectory Auditing**: Operators inspect evaluation traces, raw generation tokens, and container logs to verify scoring fidelity.
 
 ---
 
 ## The Data It Uses
 
-# Explainability & Decision Transparency Report operates under strict principles of data minimization, environment isolation, and privacy protection.
+AgentGateway operates under strict principles of data minimization, environment isolation, and privacy protection.
 
 ### 1. Ingested Input Data
 
@@ -104,7 +105,8 @@ The framework processes only operational data necessary to perform its functions
 
 ### 2. Configuration & Reference Data
 
-- **Configuration Schemas**: Declarative system policy files.
+- **Tool Catalogs**: OpenAPI 3.0 specs, MCP tool schemas, JSON schema definitions.
+- **Policy Definitions**: Common Expression Language (CEL) authorization rules and rate limit quotas.
 
 ### 3. Base Model & Inference Lineage
 
@@ -122,7 +124,7 @@ The framework processes only operational data necessary to perform its functions
 
 ## Limitations
 
-Understanding the operational boundaries and technical constraints of # Explainability & Decision Transparency Report is essential for effective deployment.
+Understanding the operational boundaries and technical constraints of AgentGateway is essential for effective deployment.
 
 ### 1. Connection Pool Contention Under Burst Traffic
 - **Limitation**: Extreme bursts in concurrent agent-to-tool connections may saturate local file descriptor and ephemeral port limits.
