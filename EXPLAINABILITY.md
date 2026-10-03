@@ -11,8 +11,7 @@ This document explains the internal mechanisms, data lineage, operational bounda
 
 ## How the Agent Decides
 
-### 1. Deterministic Multi-Stage Decision Pipeline
-The gateway routes and secures agentic communications through a deterministic, 5-stage packet inspection and dispatch pipeline.
+# Explainability & Decision Transparency Report operates via a deterministic five-stage operational pipeline.
 
 ### 1. Decision Architecture
 
@@ -53,13 +52,31 @@ The runtime intake, state classification, evaluation, and execution tracking ope
 
 ### 2. Decision Logic & Routing Formulations
 
+Scoring
+Upstream LLM backend routing and tool server selection apply a cost- and latency-optimized affinity formulation:
 
+$$S_{\text{route}}(p) = w_1 \cdot \left(1 - \frac{\text{QueueDepth}(p)}{\text{MaxQueue}}\right) + w_2 \cdot \left(1 - \frac{\text{Latency}_{\text{p95}}(p)}{\text{MaxLatency}}\right) + w_3 \cdot \text{CacheAffinity}(p) - w_4 \cdot \text{CostPerToken}(p)$$
+
+Where:
+- $w_1 = 0.35$: Upstream concurrency and queue depth health weight.
+- $w_2 = 0.30$: Moving average p95 response latency factor.
+- $w_3 = 0.20$: KV-cache prefix match score (Inference Gateway optimization).
+- $w_4 = 0.15$: Normalized token pricing penalty.
+
+Dynamic MCP tool federation ranking across registered tool servers is determined by:
+
+$$P(\text{Server}_i \mid \text{ToolReq}) = \frac{\exp(\mathbf{s}_i \cdot \mathbf{q}_{\text{tool}})}{\sum_{j=1}^{N} \exp(\mathbf{s}_j \cdot \mathbf{q}_{\text{tool}})}$$
+
+Where $\mathbf{q}_{\text{tool}}$ is the requested capability vector and $\mathbf{s}_i$ denotes server $i$'s capability schema weights.
 
 ### 3. Thresholding & Refusal Decision Criteria
 
 # Explainability & Decision Transparency Report enforces strict operational boundaries and deterministic refusal thresholds:
-- **Refusal on Policy Violation**: Requests violating boundary constraints halt with code `ERR_POLICY_VIOLATION`.
-- **Refusal on Timeout**: Executions exceeding budget limits terminate with code `ERR_EXECUTION_TIMEOUT`.
+- **Refusal on ERR_AUTH_INVALID_CREDENTIALS**: **Authentication Failure** halts execution with code `ERR_AUTH_INVALID_CREDENTIALS`.
+- **Refusal on ERR_POLICY_ACCESS_DENIED**: **RBAC / CEL Policy Denial** halts execution with code `ERR_POLICY_ACCESS_DENIED`.
+- **Refusal on ERR_GUARDRAIL_INJECTION_DETECTED**: **Prompt Injection Score** halts execution with code `ERR_GUARDRAIL_INJECTION_DETECTED`.
+- **Refusal on ERR_RATE_LIMIT_EXCEEDED**: **Tenant Token Rate Quota** halts execution with code `ERR_RATE_LIMIT_EXCEEDED`.
+- **Refusal on ERR_CIRCUIT_BREAKER_TRIPPED**: **Upstream Provider Outage** halts execution with code `ERR_CIRCUIT_BREAKER_TRIPPED`.
 
 ### 4. Fallback Decision Mechanism
 
@@ -69,8 +86,8 @@ Continuous operational stability is maintained through layered fault recovery:
 ### 5. Human-in-the-Loop Governance
 
 Human operators retain sovereign authority over the multi-agent execution lifecycle:
-- **Operational Review**: Sensitive actions require operator sign-off.
-- **Audit Logging**: All decisions are recorded for auditability.
+- **Consequential Action Sign-Off**: Sensitive and consequential actions require operator sign-off.
+- **Offline Ledger Auditing**: Operators can verify execution records and state transitions offline.
 
 ---
 
@@ -81,11 +98,13 @@ Human operators retain sovereign authority over the multi-agent execution lifecy
 ### 1. Ingested Input Data
 
 The framework processes only operational data necessary to perform its functions:
-- **Input Directives**: Operational tasks and data payloads.
+- **Agent Payloads**: Natural language prompts, tool call parameters, and model completion frames.
+- **Protocol Envelopes**: MCP JSON-RPC 2.0 frames, A2A coordination messages, gRPC streaming packets.
+- **Identity Contexts**: Bearer tokens, SPIFFE IDs, API keys, and client IP addresses.
 
 ### 2. Configuration & Reference Data
 
-- **Configuration Schemas**: Declarative system configuration files.
+- **Configuration Schemas**: Declarative system policy files.
 
 ### 3. Base Model & Inference Lineage
 
@@ -104,101 +123,6 @@ The framework processes only operational data necessary to perform its functions
 ## Limitations
 
 Understanding the operational boundaries and technical constraints of # Explainability & Decision Transparency Report is essential for effective deployment.
-
-### 1. Deterministic Multi-Stage Decision Pipeline
-The gateway routes and secures agentic communications through a deterministic, 5-stage packet inspection and dispatch pipeline.
-
-```
-+-----------------------------------------------------------------------------------+
-|                        Deterministic Gateway Pipeline                             |
-+-----------------------------------------------------------------------------------+
-|  [Stage 1: Connection Ingestion & Cryptographic Identity Check]                   |
-|     --> Validate TLS handshake, decode JWT/mTLS certificates, & authenticate      |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 2: Guardrail & Policy Evaluation Gate]                                    |
-|     --> Evaluate CEL access rules, scan for prompt injections, & redact PII       |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 3: Intelligent Provider & Tool Routing]                                   |
-|     --> Route to optimal LLM provider, federated MCP tool server, or A2A peer     |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 4: Streaming Payload Mediation & Circuit Breaking]                        |
-|     --> Manage backpressure, enforce token budgets, and stream SSE / gRPC frames  |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 5: Telemetry Instrumentation & Audit Logging]                             |
-|     --> Export OpenTelemetry traces (TTFT, token counts, latency, and error codes)|
-+-----------------------------------------------------------------------------------+
-```
-
-### 2. Mathematical Decision & Affinity Scoring
-Upstream LLM backend routing and tool server selection apply a cost- and latency-optimized affinity formulation:
-
-$$S_{\text{route}}(p) = w_1 \cdot \left(1 - \frac{\text{QueueDepth}(p)}{\text{MaxQueue}}\right) + w_2 \cdot \left(1 - \frac{\text{Latency}_{\text{p95}}(p)}{\text{MaxLatency}}\right) + w_3 \cdot \text{CacheAffinity}(p) - w_4 \cdot \text{CostPerToken}(p)$$
-
-Where:
-- $w_1 = 0.35$: Upstream concurrency and queue depth health weight.
-- $w_2 = 0.30$: Moving average p95 response latency factor.
-- $w_3 = 0.20$: KV-cache prefix match score (Inference Gateway optimization).
-- $w_4 = 0.15$: Normalized token pricing penalty.
-
-Dynamic MCP tool federation ranking across registered tool servers is determined by:
-
-$$P(\text{Server}_i \mid \text{ToolReq}) = \frac{\exp(\mathbf{s}_i \cdot \mathbf{q}_{\text{tool}})}{\sum_{j=1}^{N} \exp(\mathbf{s}_j \cdot \mathbf{q}_{\text{tool}})}$$
-
-Where $\mathbf{q}_{\text{tool}}$ is the requested capability vector and $\mathbf{s}_i$ denotes server $i$'s capability schema weights.
-
-### 3. Thresholding & Refusal Decision Criteria
-Requests violating security, budget, or safety bounds are terminated with explicit error codes:
-
-| Threshold Parameter | Value | Decision / Refusal Action | Error Code |
-| :--- | :--- | :--- | :--- |
-| **Authentication Failure** | Invalid token / expired JWT | Deny request at edge with 401 Unauthorized | `ERR_AUTH_INVALID_CREDENTIALS` |
-| **RBAC / CEL Policy Denial** | Evaluates to `false` | Deny connection with 403 Forbidden | `ERR_POLICY_ACCESS_DENIED` |
-| **Prompt Injection Score** | Classifier confidence $\ge 0.85$ | Terminate prompt processing immediately | `ERR_GUARDRAIL_INJECTION_DETECTED` |
-| **Tenant Token Rate Quota** | $> 100,000$ tokens/min | Return HTTP 429 Too Many Requests | `ERR_RATE_LIMIT_EXCEEDED` |
-| **Upstream Provider Outage** | 5 consecutive HTTP 5xx responses | Open circuit breaker for 30 seconds | `ERR_CIRCUIT_BREAKER_TRIPPED` |
-
-### 4. Multi-Tier Fallback Mechanisms & Human-in-the-Loop Governance
-1. **Tier 1 (Automated Upstream Failover)**: If the primary LLM provider drops connection or returns 503, the proxy dynamically fails over to a secondary provider within 200ms.
-2. **Tier 2 (Degraded Mode & Tool Cache)**: If an external MCP tool server becomes unreachable, the gateway serves cached schema responses or signals degraded modality to the calling agent.
-3. **Tier 3 (Human Administrator Intervention)**: Prolonged cluster-wide circuit breaker activations dispatch alerts to on-call infrastructure engineers via PagerDuty/Webhook.
-
----
-
-## The Data It Uses
-
-### 1. Ingestion Data & Input Types
-- **Agent Payloads**: Natural language prompts, tool call parameters, and model completion frames.
-- **Protocol Envelopes**: MCP JSON-RPC 2.0 frames, A2A coordination messages, gRPC streaming packets.
-- **Identity Contexts**: Bearer tokens, SPIFFE IDs, API keys, and client IP addresses.
-
-### 2. Reference Benchmarks & Upstream Schemas
-- **Tool Catalogs**: OpenAPI 3.0 specs, MCP tool schemas, JSON schema definitions.
-- **Policy Definitions**: Common Expression Language (CEL) authorization rules and rate limit quotas.
-
-### 3. Model Lineage & System Architecture
-- **Supported Providers**: OpenAI, Anthropic, Google Gemini, AWS Bedrock, Ollama, vLLM.
-- **Gateway Runtime**: Rust asynchronous networking (Tokio, Hyper), Go Kubernetes controller, Envoy data-plane extensions.
-
-### 4. Data Privacy, Governance & Retention
-- **In-Memory Streaming**: Payloads are processed in transient volatile memory buffers with zero disk writes.
-- **Zero-Storage Header Policy**: Customer auth tokens are stripped from upstream forwarding headers.
-- **Telemetry Retention**: Distributed traces and metric counters are retained in OpenTelemetry collectors for up to 14 days before aggregation.
-
----
-
-## Limitations
 
 ### 1. Connection Pool Contention Under Burst Traffic
 - **Limitation**: Extreme bursts in concurrent agent-to-tool connections may saturate local file descriptor and ephemeral port limits.
@@ -238,102 +162,7 @@ Requests violating security, budget, or safety bounds are terminated with explic
 | - Base model lineage & deterministic engines | Section 3 | Verified |
 | - Data privacy, retention lifecycle & MITRE/OWASP | Section 4 | Verified |
 | **Its limitations** | [Limitations](#limitations) | **Covered** |
-| - Deterministic Multi-Stage Decision Pipeline
-The gateway routes and secures agentic communications through a deterministic, 5-stage packet inspection and dispatch pipeline.
-
-```
-+-----------------------------------------------------------------------------------+
-|                        Deterministic Gateway Pipeline                             |
-+-----------------------------------------------------------------------------------+
-|  [Stage 1: Connection Ingestion & Cryptographic Identity Check]                   |
-|     --> Validate TLS handshake, decode JWT/mTLS certificates, & authenticate      |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 2: Guardrail & Policy Evaluation Gate]                                    |
-|     --> Evaluate CEL access rules, scan for prompt injections, & redact PII       |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 3: Intelligent Provider & Tool Routing]                                   |
-|     --> Route to optimal LLM provider, federated MCP tool server, or A2A peer     |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 4: Streaming Payload Mediation & Circuit Breaking]                        |
-|     --> Manage backpressure, enforce token budgets, and stream SSE / gRPC frames  |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-                                          v
-+-----------------------------------------------------------------------------------+
-|  [Stage 5: Telemetry Instrumentation & Audit Logging]                             |
-|     --> Export OpenTelemetry traces (TTFT, token counts, latency, and error codes)|
-+-----------------------------------------------------------------------------------+
-```
-
-### 2. Mathematical Decision & Affinity Scoring
-Upstream LLM backend routing and tool server selection apply a cost- and latency-optimized affinity formulation:
-
-$$S_{\text{route}}(p) = w_1 \cdot \left(1 - \frac{\text{QueueDepth}(p)}{\text{MaxQueue}}\right) + w_2 \cdot \left(1 - \frac{\text{Latency}_{\text{p95}}(p)}{\text{MaxLatency}}\right) + w_3 \cdot \text{CacheAffinity}(p) - w_4 \cdot \text{CostPerToken}(p)$$
-
-Where:
-- $w_1 = 0.35$: Upstream concurrency and queue depth health weight.
-- $w_2 = 0.30$: Moving average p95 response latency factor.
-- $w_3 = 0.20$: KV-cache prefix match score (Inference Gateway optimization).
-- $w_4 = 0.15$: Normalized token pricing penalty.
-
-Dynamic MCP tool federation ranking across registered tool servers is determined by:
-
-$$P(\text{Server}_i \mid \text{ToolReq}) = \frac{\exp(\mathbf{s}_i \cdot \mathbf{q}_{\text{tool}})}{\sum_{j=1}^{N} \exp(\mathbf{s}_j \cdot \mathbf{q}_{\text{tool}})}$$
-
-Where $\mathbf{q}_{\text{tool}}$ is the requested capability vector and $\mathbf{s}_i$ denotes server $i$'s capability schema weights.
-
-### 3. Thresholding & Refusal Decision Criteria
-Requests violating security, budget, or safety bounds are terminated with explicit error codes:
-
-| Threshold Parameter | Value | Decision / Refusal Action | Error Code |
-| :--- | :--- | :--- | :--- |
-| **Authentication Failure** | Invalid token / expired JWT | Deny request at edge with 401 Unauthorized | `ERR_AUTH_INVALID_CREDENTIALS` |
-| **RBAC / CEL Policy Denial** | Evaluates to `false` | Deny connection with 403 Forbidden | `ERR_POLICY_ACCESS_DENIED` |
-| **Prompt Injection Score** | Classifier confidence $\ge 0.85$ | Terminate prompt processing immediately | `ERR_GUARDRAIL_INJECTION_DETECTED` |
-| **Tenant Token Rate Quota** | $> 100,000$ tokens/min | Return HTTP 429 Too Many Requests | `ERR_RATE_LIMIT_EXCEEDED` |
-| **Upstream Provider Outage** | 5 consecutive HTTP 5xx responses | Open circuit breaker for 30 seconds | `ERR_CIRCUIT_BREAKER_TRIPPED` |
-
-### 4. Multi-Tier Fallback Mechanisms & Human-in-the-Loop Governance
-1. **Tier 1 (Automated Upstream Failover)**: If the primary LLM provider drops connection or returns 503, the proxy dynamically fails over to a secondary provider within 200ms.
-2. **Tier 2 (Degraded Mode & Tool Cache)**: If an external MCP tool server becomes unreachable, the gateway serves cached schema responses or signals degraded modality to the calling agent.
-3. **Tier 3 (Human Administrator Intervention)**: Prolonged cluster-wide circuit breaker activations dispatch alerts to on-call infrastructure engineers via PagerDuty/Webhook.
-
----
-
-## The Data It Uses
-
-### 1. Ingestion Data & Input Types
-- **Agent Payloads**: Natural language prompts, tool call parameters, and model completion frames.
-- **Protocol Envelopes**: MCP JSON-RPC 2.0 frames, A2A coordination messages, gRPC streaming packets.
-- **Identity Contexts**: Bearer tokens, SPIFFE IDs, API keys, and client IP addresses.
-
-### 2. Reference Benchmarks & Upstream Schemas
-- **Tool Catalogs**: OpenAPI 3.0 specs, MCP tool schemas, JSON schema definitions.
-- **Policy Definitions**: Common Expression Language (CEL) authorization rules and rate limit quotas.
-
-### 3. Model Lineage & System Architecture
-- **Supported Providers**: OpenAI, Anthropic, Google Gemini, AWS Bedrock, Ollama, vLLM.
-- **Gateway Runtime**: Rust asynchronous networking (Tokio, Hyper), Go Kubernetes controller, Envoy data-plane extensions.
-
-### 4. Data Privacy, Governance & Retention
-- **In-Memory Streaming**: Payloads are processed in transient volatile memory buffers with zero disk writes.
-- **Zero-Storage Header Policy**: Customer auth tokens are stripped from upstream forwarding headers.
-- **Telemetry Retention**: Distributed traces and metric counters are retained in OpenTelemetry collectors for up to 14 days before aggregation.
-
----
-
-## Limitations
-
-### 1. Connection Pool Contention Under Burst Traffic | Section 1 | Verified |
+| - Connection Pool Contention Under Burst Traffic | Section 1 | Verified |
 | - High Context Token Overhead in Tool Federation | Section 2 | Verified |
 | - Non-Trivial Latency in Multi-Guardrail Chains | Section 3 | Verified |
 | - Streaming Interruption on Provider Timeouts | Section 4 | Verified |
